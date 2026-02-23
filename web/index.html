@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Damage assessment Assist | Building Damage Assessment</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="background-blobs">
+        <div class="blob blob-1"></div>
+        <div class="blob blob-2"></div>
+        <div class="blob blob-3"></div>
+    </div>
+
+    <nav>
+        <div class="logo">
+            <i class="fas fa-satellite-dish"></i>
+            <span>Cyclone<span>Assist</span></span>
+        </div>
+        <div class="nav-links">
+            <span class="status-indicator" id="api-status">
+                <i class="fas fa-circle"></i> Connecting to Engine...
+            </span>
+        </div>
+    </nav>
+
+    <main>
+        <header>
+            <h1>Disaster Response <span>Intelligence</span></h1>
+            <p>Upload pre and post disaster satellite imagery for immediate structural damage assessment.</p>
+        </header>
+
+        <section class="upload-section">
+            <div class="upload-grid">
+                <div class="upload-card" id="pre-upload-card">
+                    <div class="card-header">
+                        <i class="fas fa-history"></i>
+                        <h3>Pre-Disaster</h3>
+                    </div>
+                    <div class="drop-zone" id="pre-drop-zone">
+                        <input type="file" id="pre-input" accept="image/*" hidden>
+                        <div class="drop-zone-content">
+                            <i class="fas fa-cloud-upload-alt"></i>
+                            <p>Select Baseline Image</p>
+                        </div>
+                        <img id="pre-preview" class="preview-img hidden">
+                    </div>
+                </div>
+
+                <div class="upload-card" id="post-upload-card">
+                    <div class="card-header">
+                        <i class="fas fa-bolt"></i>
+                        <h3>Post-Disaster</h3>
+                    </div>
+                    <div class="drop-zone" id="post-drop-zone">
+                        <input type="file" id="post-input" accept="image/*" hidden>
+                        <div class="drop-zone-content">
+                            <i class="fas fa-cloud-upload-alt"></i>
+                            <p>Select Event Image</p>
+                        </div>
+                        <img id="post-preview" class="preview-img hidden">
+                    </div>
+                </div>
+            </div>
+
+            <button id="analyze-btn" class="primary-btn" disabled>
+                <i class="fas fa-microchip"></i> Run AI Assessment
+            </button>
+        </section>
+
+        <section id="results-section" class="results-section hidden">
+            <div class="results-header">
+                <h2>Assessment Report</h2>
+                <div class="severity-badge">
+                    Severity Index: <span id="severity-score">0.0</span>/10
+                </div>
+            </div>
+
+            <div class="results-grid">
+                <div class="result-card main-output">
+                    <h3>AI Detection Mask</h3>
+                    <div class="mask-container">
+                        <img id="mask-result" src="" alt="Damage Mask">
+                    </div>
+                    <div class="legend">
+                        <div class="legend-item"><span class="dot green"></span> No Damage</div>
+                        <div class="legend-item"><span class="dot yellow"></span> Minor</div>
+                        <div class="legend-item"><span class="dot orange"></span> Major</div>
+                        <div class="legend-item"><span class="dot red"></span> Destroyed</div>
+                    </div>
+                </div>
+
+                <div class="result-card metrics">
+                    <h3>Analytics Breakdown</h3>
+                    <div class="scene-rating">
+                        <label>Overall Scene Rating</label>
+                        <div id="scene-assessment" class="rating-value">--</div>
+                        <div class="confidence">Confidence: <span id="confidence-val">0</span>%</div>
+                    </div>
+                    
+                    <div class="stats-container" id="stats-container">
+                        <!-- Stats will be injected here -->
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <div id="loader" class="loader-overlay hidden">
+        <div class="loader-content">
+            <div class="spinner"></div>
+            <p>Processing Neural Fusion...</p>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

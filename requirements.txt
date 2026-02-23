@@ -1,5 +1,12 @@
-opencv-python 
-numpy 
-shapely 
+opencv-python
+numpy
+shapely
 tqdm
 matplotlib
+tensorflow
+scikit-learn
+seaborn
+fastapi
+uvicorn
+python-multipart
+pillow

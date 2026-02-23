@@ -5,101 +5,110 @@ import glob
 import tensorflow as tf
 from tensorflow import keras
 
+CLASS_WEIGHTS = {
+    0: 0.1,   # Background
+    1: 1.0,   # No Damage
+    2: 12.0,  # Minor Damage (Increased slightly to improve minority class accuracy)
+    3: 12.0,  # Major Damage
+    4: 18.0   # Destroyed
+}
+
 class DisasterDataGenerator(keras.utils.Sequence):
-    def __init__(self, image_dir, mask_dir, batch_size=8, img_size=(512, 512), shuffle=True):
+    def __init__(self, image_list, mask_dir, batch_size=8, img_size=(512, 512), shuffle=True, augment=True):
         """
         Custom Keras Data Generator for Siamese U-Net.
         
         Args:
-            image_dir (str): Path to raw images (containing *pre_disaster.png)
-            mask_dir (str): Path to processed integer masks
-            batch_size (int): Number of samples per batch
-            img_size (tuple): Target size (height, width) to resize images to
-            shuffle (bool): Whether to shuffle data at the end of every epoch
+            image_list (list): List of paths to pre-disaster images.
+            mask_dir (str): Path to processed integer masks.
+            batch_size (int): Number of samples per batch.
+            img_size (tuple): Target size (height, width).
+            shuffle (bool): Whether to shuffle data.
+            augment (bool): Whether to apply data augmentation.
         """
-        self.image_dir = image_dir
         self.mask_dir = mask_dir
         self.batch_size = batch_size
         self.img_size = img_size
         self.shuffle = shuffle
-        
-        # 1. List all PRE-disaster images
-        # We use PRE images as the "anchor" to find the corresponding POST and MASK
-        self.pre_image_paths = sorted(glob.glob(os.path.join(image_dir, "*_pre_disaster.png")))
+        self.augment = augment
         
         # Filter: Only keep samples that actually have a generated mask
-        # (Sometimes preprocessing skips corrupt files, so we must check)
-        self.valid_indices = []
-        for i, path in enumerate(self.pre_image_paths):
+        self.pre_image_paths = []
+        for path in image_list:
             filename = os.path.basename(path).replace("_pre_disaster.png", "_post_disaster.png")
             mask_path = os.path.join(mask_dir, filename)
             if os.path.exists(mask_path):
-                self.valid_indices.append(i)
+                self.pre_image_paths.append(path)
                 
-        # Update lists to only include valid pairs
-        self.pre_image_paths = [self.pre_image_paths[i] for i in self.valid_indices]
         self.indexes = np.arange(len(self.pre_image_paths))
-        
-        print(f"Found {len(self.pre_image_paths)} valid Pre/Post/Mask triplets.")
+        print(f"Generator initialized with {len(self.pre_image_paths)} valid samples (Augment={augment}).")
 
     def __len__(self):
-        """Denotes the number of batches per epoch"""
         return int(np.floor(len(self.pre_image_paths) / self.batch_size))
 
     def __getitem__(self, index):
-        """Generate one batch of data"""
-        # Generate indexes of the batch
         indexes = self.indexes[index*self.batch_size:(index+1)*self.batch_size]
-
-        # Find list of IDs
         list_paths_temp = [self.pre_image_paths[k] for k in indexes]
-
-        # Generate data
-        X, y = self.__data_generation(list_paths_temp)
-        return X, y
+        return self.__data_generation(list_paths_temp)
 
     def on_epoch_end(self):
-        """Updates indexes after each epoch"""
         if self.shuffle:
             np.random.shuffle(self.indexes)
 
     def __data_generation(self, list_paths_temp):
-        """Generates data containing batch_size samples"""
-        # Initialization
-        # X1: Pre-images, X2: Post-images
         X1 = np.empty((self.batch_size, *self.img_size, 3), dtype=np.float32)
         X2 = np.empty((self.batch_size, *self.img_size, 3), dtype=np.float32)
         y = np.empty((self.batch_size, *self.img_size, 1), dtype=np.int32)
+        y_assessment = np.empty((self.batch_size,), dtype=np.int32)
+        sample_weights = np.empty((self.batch_size, *self.img_size), dtype=np.float32)
 
         for i, pre_path in enumerate(list_paths_temp):
-            # 1. Define Paths
             post_path = pre_path.replace("_pre_disaster.png", "_post_disaster.png")
-            filename = os.path.basename(post_path) # Mask has same name as post image
+            filename = os.path.basename(post_path) 
             mask_path = os.path.join(self.mask_dir, filename)
 
-            # 2. Load Images (RGB)
+            # Load
             img_pre = cv2.imread(pre_path)
             img_post = cv2.imread(post_path)
-            
-            # Convert BGR -> RGB and Normalize (0-1)
-            img_pre = cv2.cvtColor(img_pre, cv2.COLOR_BGR2RGB) / 255.0
-            img_post = cv2.cvtColor(img_post, cv2.COLOR_BGR2RGB) / 255.0
-
-            # 3. Load Mask (Grayscale)
-            # Flag 0 ensures it reads as (H, W), not (H, W, 3)
             mask = cv2.imread(mask_path, 0) 
 
-            # 4. Resize (if necessary)
+            # Initial Resize if needed
             if img_pre.shape[:2] != self.img_size:
                 img_pre = cv2.resize(img_pre, self.img_size)
                 img_post = cv2.resize(img_post, self.img_size)
-                # Use Nearest Neighbor for mask to keep classes as integers (0,1,2...), not floats
                 mask = cv2.resize(mask, self.img_size, interpolation=cv2.INTER_NEAREST)
 
-            # 5. Assign to Batch
-            X1[i,] = img_pre
-            X2[i,] = img_post
-            y[i,] = np.expand_dims(mask, axis=-1) # Needs to be (H, W, 1)
+            # --- Data Augmentation ---
+            if self.augment:
+                # Random Flips
+                if np.random.rand() > 0.5:
+                    flip_code = np.random.choice([0, 1, -1]) # 0: vert, 1: horiz, -1: both
+                    img_pre = cv2.flip(img_pre, flip_code)
+                    img_post = cv2.flip(img_post, flip_code)
+                    mask = cv2.flip(mask, flip_code)
+                
+                # Random Rotations (90 deg increments)
+                if np.random.rand() > 0.5:
+                    k = np.random.randint(1, 4)
+                    img_pre = np.rot90(img_pre, k)
+                    img_post = np.rot90(img_post, k)
+                    mask = np.rot90(mask, k)
 
-        # Return: ([Pre, Post], Mask)
-        return [X1, X2], y
+            # Normalize and Color Convert
+            X1[i,] = cv2.cvtColor(img_pre, cv2.COLOR_BGR2RGB) / 255.0
+            X2[i,] = cv2.cvtColor(img_post, cv2.COLOR_BGR2RGB) / 255.0
+            y[i,] = np.expand_dims(mask, axis=-1)
+
+            # --- Global Assessment Label ---
+            # Most severe damage class present in the scene
+            unique_classes = np.unique(mask)
+            unique_classes = unique_classes[unique_classes > 0] # Ignore background
+            y_assessment[i] = np.max(unique_classes) if len(unique_classes) > 0 else 0
+
+            # Calculate Sample Weights
+            weights = np.zeros_like(mask, dtype=np.float32)
+            for cls_id, weight in CLASS_WEIGHTS.items():
+                weights[mask == cls_id] = weight
+            sample_weights[i,] = weights
+
+        return (X1, X2), {"mask_output": y, "assessment_output": y_assessment}, {"mask_output": sample_weights}

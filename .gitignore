@@ -205,3 +205,14 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# Project Specific
+data/
+results/models/*.keras
+results/models/*.h5
+results/logs/
+assessment_report.png
+test_data/
+*.png
+*.jpg
+*.jpeg
