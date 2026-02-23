@@ -39,7 +39,7 @@ The [xBD dataset](https://xview2.org/dataset) is a large-scale dataset for build
 
 1.  **Clone the repository**:
     ```bash
-    git clone https://github.com/sahil120105/Building-Damage-Assessment.git
+    git clone https://github.com/RohitDeshmukh-1/Disaster_Damage_Assessment.git
     cd Building-Damage-Assessment
     ```
 
@@ -51,7 +51,7 @@ The [xBD dataset](https://xview2.org/dataset) is a large-scale dataset for build
 ## 🧠 Download Model Weights
 
 Since the trained model file is large (~1GB), it is not included in the repository.
-1. **Download** the `xbd_tier1_best.keras` file from [INSERT YOUR LINK HERE (e.g., GitHub Releases/Google Drive)].
+1. **Download** the `xbd_tier1_best.keras` file from [GitHub Releases](https://github.com/RohitDeshmukh-1/Disaster_Damage_Assessment/releases/tag/MODEL).
 2. **Place** the file in: `results/models/xbd_tier1_best.keras`
 
 ---
